@@ -1,0 +1,229 @@
+# Canonical zfb-demo deploy workflow (S4 standalone-shape template).
+#
+# PARAMETERIZE per demo before committing into the demo repo:
+#   - Replace every occurrence of  zfb-example-blog  with the Cloudflare
+#     Pages project name (also the demo repo name):
+#       zfb-example-blog | zfb-example-corporate-website | zfb-example-webshop
+#   - The webshop (#316 / S7) additionally needs a D1 migrate step — see
+#     the README "Webshop D1 addendum" section. Insert it AFTER "Build" and
+#     BEFORE "Deploy to Cloudflare Pages".
+#
+# This workflow clones the zfb sibling INLINE at the SHA pinned in
+# framework-pins.json. It does NOT call scripts/setup-upstream.mjs
+# (that script is the local-dev bootstrap path only).
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Read framework pins
+        id: pins
+        run: |
+          ZFB_SHA=$(jq -r '.zfb.sha' framework-pins.json)
+          echo "zfb_sha=${ZFB_SHA}" >> "$GITHUB_OUTPUT"
+
+      # zfb's package.json uses file:../zfb/packages/{zfb,zfb-runtime}
+      # which resolves to the sibling checkout outside GITHUB_WORKSPACE.
+      # actions/checkout rejects paths outside GITHUB_WORKSPACE, so we use git clone.
+      # Cargo.lock is gitignored in zudo-front-builder; use the pinned SHA as the cache key.
+      - name: Clone zfb sibling at pinned SHA
+        env:
+          ZFB_SHA: ${{ steps.pins.outputs.zfb_sha }}
+        run: |
+          git clone https://github.com/Takazudo/zudo-front-builder.git ../zfb
+          git -C ../zfb checkout "${ZFB_SHA}"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      # Cache Cargo registry and the compiled zfb binary.
+      # Key uses the pinned zfb SHA (Cargo.lock is gitignored in zudo-front-builder).
+      # Cold install takes ~3-5 min; warm hits are <5 s.
+      - name: Restore Cargo / zfb binary cache
+        id: cargo-cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.cargo/bin/zfb
+          key: cargo-zfb-${{ runner.os }}-${{ steps.pins.outputs.zfb_sha }}
+          restore-keys: |
+            cargo-zfb-${{ runner.os }}-
+
+      # zfb's pnpm node_modules in the cloned sibling repo are required for
+      # TWO independent reasons, so this step runs on every job (no cache-hit
+      # guard):
+      #
+      #   1. Cold cargo install: zfb's build.rs reads framework packages
+      #      (e.g. preact) from ../zfb/node_modules/.pnpm and panics with
+      #      "framework package not found" if they're missing.
+      #
+      #   2. Example bundling (warm cargo cache): `zfb build` bundles
+      #      zfb-runtime source files via esbuild, which needs to resolve
+      #      zfb-runtime's runtime deps like `hono` from ../zfb/node_modules.
+      #      Skipping this on cache-hit causes "Could not resolve 'hono'" at
+      #      example build time.
+      - name: Install zfb workspace deps (required by zfb's cargo build script and example bundling)
+        working-directory: ../zfb
+        run: pnpm install --frozen-lockfile
+
+      - name: Install zfb CLI
+        if: steps.cargo-cache.outputs.cache-hit != 'true'
+        run: |
+          echo "Cache miss — building zfb from source (this may take ~3-5 min)"
+          START=$(date +%s)
+          # `--force` because `restore-keys` may have laid down a stale
+          # `~/.cargo/bin/zfb` from a previous zfb SHA's cache. Without it,
+          # `cargo install` errors with "binary `zfb` already exists in
+          # destination" and aborts the job.
+          cargo install --force --path ../zfb/crates/zfb
+          END=$(date +%s)
+          ELAPSED=$((END - START))
+          echo "zfb install completed in ${ELAPSED} seconds"
+          if [ "${ELAPSED}" -gt 300 ]; then
+            echo "::warning::zfb cargo install took ${ELAPSED}s (>5 min). Consider switching to a published binary when zfb provides one."
+          fi
+
+      - name: Verify zfb CLI
+        run: zfb --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # === WEBSHOP-ONLY (S7 / #316) D1 MIGRATE STEP GOES HERE ===
+      # See the template README "Webshop D1 addendum" section. Blog and
+      # corporate-website demos delete this comment block and add nothing.
+
+      - name: Install wrangler
+        run: npm install -g wrangler@4
+
+      - name: Compute deploy branch slug
+        id: branch
+        env:
+          GITHUB_HEAD_REF_VAL: ${{ github.head_ref }}
+          GITHUB_REF_NAME_VAL: ${{ github.ref_name }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Cloudflare Pages branch names cannot contain slashes; replace with hyphens.
+            DEPLOY_BRANCH=$(echo "${GITHUB_HEAD_REF_VAL}" | tr '/' '-')
+          else
+            DEPLOY_BRANCH="main"
+          fi
+          echo "deploy_branch=${DEPLOY_BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Cloudflare Pages project exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Idempotent: create on first run, no-op on subsequent runs.
+          # wrangler@4 no longer auto-creates the project on `pages deploy`.
+          out=$(wrangler pages project create zfb-example-blog \
+            --production-branch=main 2>&1) && rc=0 || rc=$?
+          echo "$out"
+          if [ "$rc" -eq 0 ]; then
+            echo "Project created."
+          elif echo "$out" | grep -qE "already exists|8000077|duplicate"; then
+            echo "Project already exists — continuing."
+          else
+            echo "Project create failed with unexpected error."
+            exit "$rc"
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOY_BRANCH: ${{ steps.branch.outputs.deploy_branch }}
+        run: |
+          for attempt in 1 2 3; do
+            echo "Deploy attempt $attempt/3..."
+            if wrangler pages deploy dist \
+              --project-name=zfb-example-blog \
+              --branch="${DEPLOY_BRANCH}" \
+              --commit-hash="${GITHUB_SHA}" \
+              --commit-message="Deploy: ${GITHUB_SHA}"; then
+              echo "Deploy succeeded on attempt $attempt"
+              if [ "${DEPLOY_BRANCH}" = "main" ]; then
+                echo "deploy_url=https://zfb-example-blog.pages.dev/" >> "$GITHUB_OUTPUT"
+              else
+                echo "deploy_url=https://${DEPLOY_BRANCH}.zfb-example-blog.pages.dev/" >> "$GITHUB_OUTPUT"
+              fi
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Deploy failed, retrying in 150 seconds..."
+              sleep 150
+            fi
+          done
+          echo "Deploy failed after 3 attempts"
+          exit 1
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.deploy.outcome == 'success'
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.deploy_url }}
+          DEPLOY_BRANCH: ${{ steps.branch.outputs.deploy_branch }}
+        with:
+          script: |
+            const deployUrl = process.env.DEPLOY_URL;
+            const deployBranch = process.env.DEPLOY_BRANCH;
+            const marker = '<!-- cf-preview-branch -->';
+            const body = `${marker}\n### Preview deployed\n\nBranch \`${deployBranch}\` is live at: ${deployUrl}\n\n_Updated for commit \`${context.sha.substring(0, 7)}\`._`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((c) => c.body && c.body.startsWith(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

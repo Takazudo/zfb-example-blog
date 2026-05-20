@@ -1,0 +1,28 @@
+{
+  "name": "zfb-example-blog",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.30.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "setup:upstream": "node scripts/setup-upstream.mjs",
+    "predev": "rm -rf dist .zfb .zfb-build",
+    "dev": "zfb dev",
+    "build": "zfb build",
+    "preview": "zfb preview",
+    "typecheck": "zfb check"
+  },
+  "dependencies": {
+    "@takazudo/zfb": "file:../zfb/packages/zfb",
+    "@takazudo/zfb-runtime": "file:../zfb/packages/zfb-runtime",
+    "preact": "^10.22.0",
+    "preact-render-to-string": "^6.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3"
+  }
+}
