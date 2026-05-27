@@ -32,7 +32,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, copyFileSync, chmodSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -95,6 +95,27 @@ run('pnpm install --frozen-lockfile', zfbDir);
 const zfbBinDir = resolve(repoRoot, '.zfb-bin');
 console.log('\n[setup-upstream] Installing zfb CLI into .zfb-bin/...');
 run(`cargo install --path "${resolve(zfbDir, 'crates/zfb')}" --root "${zfbBinDir}"`);
+
+// Populate the platform-package stub with the cargo-built binary so bin/zfb.mjs's
+// existsSync guard succeeds during the verification build (#544 root cause i).
+const platformPkgDir = {
+  'darwin-arm64': 'zfb-darwin-arm64',
+  'darwin-x64':   'zfb-darwin-x64',
+  'linux-arm64':  'zfb-linux-arm64-gnu',
+  'linux-x64':    'zfb-linux-x64-gnu',
+  'win32-x64':    'zfb-win32-x64-msvc',
+}[`${process.platform}-${process.arch}`];
+const binName = process.platform === 'win32' ? 'zfb.exe' : 'zfb';
+const stubBinPath = resolve(zfbDir, 'packages', platformPkgDir, binName);
+console.log('\n[setup-upstream] Populating zfb platform-package stub binary...');
+copyFileSync(resolve(zfbBinDir, 'bin', binName), stubBinPath);
+chmodSync(stubBinPath, 0o755);
+
+// Build zfb-runtime dist/ so esbuild resolves the published shape during consumer
+// bundling (#544 root cause ii). zfb-runtime's exports point at src/*.ts in
+// workspace shape; dist/ must exist for the file:-install path used here.
+console.log('\n[setup-upstream] Building zfb-runtime dist/...');
+run('pnpm --filter @takazudo/zfb-runtime build', zfbDir);
 
 // Run pnpm install in this consumer
 console.log('\n[setup-upstream] Installing consumer deps...');
