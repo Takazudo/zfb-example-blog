@@ -8,9 +8,9 @@
 #     the README "Webshop D1 addendum" section. Insert it AFTER "Build" and
 #     BEFORE "Deploy to Cloudflare Pages".
 #
-# This workflow clones the zfb sibling INLINE at the SHA pinned in
-# framework-pins.json. It does NOT call scripts/setup-upstream.mjs
-# (that script is the local-dev bootstrap path only).
+# zfb is consumed from npm (@takazudo/zfb ships prebuilt platform binaries),
+# so plain `pnpm install` provides the `zfb` CLI — no Rust toolchain or
+# upstream sibling checkout is needed.
 name: Deploy to Cloudflare Pages
 
 on:
@@ -38,23 +38,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Read framework pins
-        id: pins
-        run: |
-          ZFB_SHA=$(jq -r '.zfb.sha' framework-pins.json)
-          echo "zfb_sha=${ZFB_SHA}" >> "$GITHUB_OUTPUT"
-
-      # zfb's package.json uses file:../zfb/packages/{zfb,zfb-runtime}
-      # which resolves to the sibling checkout outside GITHUB_WORKSPACE.
-      # actions/checkout rejects paths outside GITHUB_WORKSPACE, so we use git clone.
-      # Cargo.lock is gitignored in zudo-front-builder; use the pinned SHA as the cache key.
-      - name: Clone zfb sibling at pinned SHA
-        env:
-          ZFB_SHA: ${{ steps.pins.outputs.zfb_sha }}
-        run: |
-          git clone https://github.com/Takazudo/zudo-front-builder.git ../zfb
-          git -C ../zfb checkout "${ZFB_SHA}"
-
       - name: Setup pnpm
         uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
 
@@ -63,61 +46,11 @@ jobs:
         with:
           node-version: 22
 
-      # Cache Cargo registry and the compiled zfb binary.
-      # Key uses the pinned zfb SHA (Cargo.lock is gitignored in zudo-front-builder).
-      # Cold install takes ~3-5 min; warm hits are <5 s.
-      - name: Restore Cargo / zfb binary cache
-        id: cargo-cache
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            ~/.cargo/bin/zfb
-          key: cargo-zfb-${{ runner.os }}-${{ steps.pins.outputs.zfb_sha }}
-          restore-keys: |
-            cargo-zfb-${{ runner.os }}-
-
-      # zfb's pnpm node_modules in the cloned sibling repo are required for
-      # TWO independent reasons, so this step runs on every job (no cache-hit
-      # guard):
-      #
-      #   1. Cold cargo install: zfb's build.rs reads framework packages
-      #      (e.g. preact) from ../zfb/node_modules/.pnpm and panics with
-      #      "framework package not found" if they're missing.
-      #
-      #   2. Example bundling (warm cargo cache): `zfb build` bundles
-      #      zfb-runtime source files via esbuild, which needs to resolve
-      #      zfb-runtime's runtime deps like `hono` from ../zfb/node_modules.
-      #      Skipping this on cache-hit causes "Could not resolve 'hono'" at
-      #      example build time.
-      - name: Install zfb workspace deps (required by zfb's cargo build script and example bundling)
-        working-directory: ../zfb
-        run: pnpm install --frozen-lockfile
-
-      - name: Install zfb CLI
-        if: steps.cargo-cache.outputs.cache-hit != 'true'
-        run: |
-          echo "Cache miss — building zfb from source (this may take ~3-5 min)"
-          START=$(date +%s)
-          # `--force` because `restore-keys` may have laid down a stale
-          # `~/.cargo/bin/zfb` from a previous zfb SHA's cache. Without it,
-          # `cargo install` errors with "binary `zfb` already exists in
-          # destination" and aborts the job.
-          cargo install --force --path ../zfb/crates/zfb
-          END=$(date +%s)
-          ELAPSED=$((END - START))
-          echo "zfb install completed in ${ELAPSED} seconds"
-          if [ "${ELAPSED}" -gt 300 ]; then
-            echo "::warning::zfb cargo install took ${ELAPSED}s (>5 min). Consider switching to a published binary when zfb provides one."
-          fi
-
-      - name: Verify zfb CLI
-        run: zfb --version
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Verify zfb CLI
+        run: pnpm exec zfb --version
 
       - name: Build
         run: pnpm build

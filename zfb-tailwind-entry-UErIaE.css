@@ -1,0 +1,585 @@
+@source "/Users/takazudo/repos/zfb-ex/zfb-example-blog/pages";
+@source "/Users/takazudo/repos/zfb-ex/zfb-example-blog/components";
+@source "/Users/takazudo/repos/zfb-ex/zfb-example-blog/layouts";
+@source "/Users/takazudo/repos/zfb-ex/zfb-example-blog/content";
+
+/*
+ * zfb-example-blog — global stylesheet.
+ *
+ * Architecture (Tailwind v4):
+ *  1. Raw design tokens live on :root as `--blog-*` custom properties; the
+ *     dark theme overrides them under `[data-theme="dark"]`. This attribute
+ *     is set synchronously by the pre-hydration script in layouts/default.tsx
+ *     and toggled at runtime by the ThemeToggle island.
+ *  2. The `@theme` block re-exports the subset of tokens that should generate
+ *     Tailwind utility classes (bg-*, text-*, border-*, rounded-*, …).
+ *  3. Component + prose styles use zero-specificity `:where()` selectors so
+ *     they never out-rank a utility class.
+ *
+ * Tailwind v4's `dark:` variant defaults to `prefers-color-scheme`. This blog
+ * drives theming from a `data-theme` attribute instead, so the variant is
+ * re-pointed below with `@custom-variant`.
+ */
+
+/* ── Raw token declarations ─────────────────────────────────────────────── */
+:root {
+  /* Surface + text — light theme */
+  --blog-bg: #fbfbfa;
+  --blog-surface: #ffffff;
+  --blog-fg: #1c1b1a;
+  --blog-fg-muted: #5c5b58;
+  --blog-fg-subtle: #87857f;
+  --blog-border: #e6e4df;
+  --blog-border-strong: #d2cfc8;
+  --blog-accent: #2d5fd6;
+  --blog-accent-hover: #1f4bb5;
+  --blog-accent-soft: #eef2fd;
+  --blog-code-bg: #f4f3f0;
+  --blog-code-fg: #b3344a;
+  --blog-block-bg: #1f1d2b;
+  --blog-block-fg: #e9e7f3;
+  --blog-shadow: 0 1px 2px rgba(20, 18, 16, 0.04),
+    0 6px 16px -8px rgba(20, 18, 16, 0.18);
+  --blog-shadow-lift: 0 2px 4px rgba(20, 18, 16, 0.06),
+    0 14px 32px -12px rgba(20, 18, 16, 0.26);
+
+  /* Type scale */
+  --blog-text-xs: 0.78rem;
+  --blog-text-sm: 0.875rem;
+  --blog-text-base: 1.0625rem;
+  --blog-text-lg: 1.2rem;
+  --blog-text-xl: 1.6rem;
+  --blog-text-2xl: clamp(2rem, 1.5rem + 2.2vw, 2.85rem);
+
+  /* Vertical rhythm */
+  --blog-flow-2xs: 0.4rem;
+  --blog-flow-xs: 0.75rem;
+  --blog-flow-sm: 1rem;
+  --blog-flow-md: 1.4rem;
+  --blog-flow-lg: 2.25rem;
+  --blog-flow-xl: 3.25rem;
+
+  --blog-radius-sm: 0.4rem;
+  --blog-radius-md: 0.7rem;
+  --blog-radius-lg: 1.1rem;
+
+  --blog-font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --blog-font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo,
+    Consolas, monospace;
+
+  --blog-measure: 44rem;
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --blog-bg: #15141b;
+  --blog-surface: #1e1c27;
+  --blog-fg: #ecebf1;
+  --blog-fg-muted: #a6a3b4;
+  --blog-fg-subtle: #76738a;
+  --blog-border: #2c2a38;
+  --blog-border-strong: #3b3850;
+  --blog-accent: #8aa9ff;
+  --blog-accent-hover: #a6beff;
+  --blog-accent-soft: #232238;
+  --blog-code-bg: #262433;
+  --blog-code-fg: #ff97ad;
+  --blog-block-bg: #0f0e16;
+  --blog-block-fg: #e9e7f3;
+  --blog-shadow: 0 1px 2px rgba(0, 0, 0, 0.4),
+    0 6px 16px -8px rgba(0, 0, 0, 0.6);
+  --blog-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 14px 32px -12px rgba(0, 0, 0, 0.7);
+
+  color-scheme: dark;
+}
+
+/* ── Tailwind v4 ────────────────────────────────────────────────────────── */
+@import "tailwindcss";
+
+/* Drive `dark:` utilities off the data-theme attribute, not prefers-color-scheme. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --color-bg: var(--blog-bg);
+  --color-surface: var(--blog-surface);
+  --color-fg: var(--blog-fg);
+  --color-fg-muted: var(--blog-fg-muted);
+  --color-fg-subtle: var(--blog-fg-subtle);
+  --color-border: var(--blog-border);
+  --color-border-strong: var(--blog-border-strong);
+  --color-accent: var(--blog-accent);
+  --color-accent-soft: var(--blog-accent-soft);
+
+  --font-sans: var(--blog-font-sans);
+  --font-mono: var(--blog-font-mono);
+
+  --text-xs: var(--blog-text-xs);
+  --text-sm: var(--blog-text-sm);
+  --text-base: var(--blog-text-base);
+  --text-lg: var(--blog-text-lg);
+  --text-xl: var(--blog-text-xl);
+  --text-2xl: var(--blog-text-2xl);
+
+  --radius-sm: var(--blog-radius-sm);
+  --radius-md: var(--blog-radius-md);
+  --radius-lg: var(--blog-radius-lg);
+}
+
+/* ── Base layer ─────────────────────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--blog-font-sans);
+    font-size: var(--blog-text-base);
+    line-height: 1.7;
+    background: var(--blog-bg);
+    color: var(--blog-fg);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  a {
+    color: var(--blog-accent);
+    text-underline-offset: 0.18em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--blog-accent);
+    outline-offset: 2px;
+    border-radius: 0.2rem;
+  }
+
+  ::selection {
+    background: var(--blog-accent);
+    color: #fff;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ── Site chrome ────────────────────────────────────────────────────────── */
+@layer components {
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.9rem clamp(1.25rem, 5vw, 2.5rem);
+    background: color-mix(in srgb, var(--blog-bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-block-end: 1px solid var(--blog-border);
+  }
+
+  .site-title {
+    font-weight: 700;
+    font-size: var(--blog-text-lg);
+    letter-spacing: -0.02em;
+    text-decoration: none;
+    color: var(--blog-fg);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .site-title::before {
+    content: "";
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 0.2rem;
+    background: linear-gradient(135deg, var(--blog-accent), #7b9bff);
+  }
+
+  .site-nav {
+    display: flex;
+    gap: clamp(0.75rem, 3vw, 1.5rem);
+    align-items: center;
+    font-size: var(--blog-text-sm);
+    font-weight: 500;
+  }
+
+  .site-nav a {
+    color: var(--blog-fg-muted);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .site-nav a:hover {
+    color: var(--blog-fg);
+  }
+
+  .site-main {
+    flex: 1;
+    width: 100%;
+    max-width: var(--blog-measure);
+    margin-inline: auto;
+    padding: clamp(2rem, 6vw, 4rem) clamp(1.25rem, 5vw, 2.5rem);
+  }
+
+  .site-footer {
+    border-block-start: 1px solid var(--blog-border);
+    padding: 2rem clamp(1.25rem, 5vw, 2.5rem);
+    color: var(--blog-fg-subtle);
+    font-size: var(--blog-text-sm);
+    text-align: center;
+  }
+
+  .theme-toggle {
+    border: 1px solid var(--blog-border-strong);
+    background: var(--blog-surface);
+    color: var(--blog-fg-muted);
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--blog-text-xs);
+    font-weight: 600;
+    line-height: 1;
+    transition: border-color 0.15s ease, color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--blog-accent);
+    color: var(--blog-fg);
+  }
+
+  /* ── Page intro / hero ──────────────────────────────────────────────── */
+  .page-hero {
+    margin-block-end: var(--blog-flow-xl);
+  }
+
+  .page-hero h1 {
+    margin: 0;
+    font-size: var(--blog-text-2xl);
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .page-hero p {
+    margin: var(--blog-flow-sm) 0 0;
+    max-width: 36rem;
+    font-size: var(--blog-text-lg);
+    color: var(--blog-fg-muted);
+    text-wrap: pretty;
+  }
+
+  .section-label {
+    margin: 0 0 var(--blog-flow-md);
+    font-size: var(--blog-text-xs);
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--blog-fg-subtle);
+  }
+
+  /* ── Post list ──────────────────────────────────────────────────────── */
+  .post-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .post-list li {
+    background: var(--blog-surface);
+    border: 1px solid var(--blog-border);
+    border-radius: var(--blog-radius-md);
+    padding: 1.25rem 1.4rem;
+    box-shadow: var(--blog-shadow);
+    transition: transform 0.16s ease, box-shadow 0.16s ease,
+      border-color 0.16s ease;
+  }
+
+  .post-list li:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--blog-shadow-lift);
+    border-color: var(--blog-border-strong);
+  }
+
+  .post-list li > a {
+    font-size: var(--blog-text-lg);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    color: var(--blog-fg);
+    text-decoration: none;
+  }
+
+  .post-list li > a:hover {
+    color: var(--blog-accent);
+  }
+
+  .post-meta {
+    margin: 0.4rem 0 0;
+    color: var(--blog-fg-muted);
+    font-size: var(--blog-text-sm);
+  }
+
+  .post-meta time {
+    font-variant-numeric: tabular-nums;
+    color: var(--blog-fg-subtle);
+  }
+
+  /* ── Tag list ───────────────────────────────────────────────────────── */
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
+    margin: var(--blog-flow-lg) 0 0;
+    padding: 0;
+  }
+
+  .tag-list a {
+    display: inline-block;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    background: var(--blog-accent-soft);
+    color: var(--blog-accent);
+    font-size: var(--blog-text-xs);
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+  }
+
+  .tag-list a:hover {
+    background: color-mix(in srgb, var(--blog-accent) 18%, transparent);
+  }
+
+  /* ── Pagination ─────────────────────────────────────────────────────── */
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block-start: var(--blog-flow-xl);
+  }
+
+  .pagination a {
+    flex: 1;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--blog-border);
+    border-radius: var(--blog-radius-sm);
+    background: var(--blog-surface);
+    color: var(--blog-fg);
+    font-size: var(--blog-text-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .pagination a:hover {
+    border-color: var(--blog-accent);
+    color: var(--blog-accent);
+  }
+
+  .pagination-prev {
+    text-align: start;
+  }
+
+  .pagination-next {
+    text-align: end;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-block-start: var(--blog-flow-lg);
+    font-size: var(--blog-text-sm);
+    font-weight: 600;
+    color: var(--blog-fg-muted);
+    text-decoration: none;
+  }
+
+  .back-link:hover {
+    color: var(--blog-accent);
+  }
+
+  /* ── Article header ─────────────────────────────────────────────────── */
+  .post-header {
+    margin-block-end: var(--blog-flow-lg);
+    padding-block-end: var(--blog-flow-md);
+    border-block-end: 1px solid var(--blog-border);
+  }
+
+  .post-header h1 {
+    margin: 0;
+    font-size: var(--blog-text-2xl);
+    line-height: 1.12;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .post-header .post-meta {
+    margin-block-start: var(--blog-flow-xs);
+    font-size: var(--blog-text-base);
+  }
+
+  /* ── Prose — flow-space rhythm, zero-specificity selectors ──────────── */
+  .prose > * + * {
+    margin-block-start: var(--flow-space, var(--blog-flow-md));
+  }
+  .prose :where(h2) {
+    --flow-space: var(--blog-flow-xl);
+  }
+  .prose :where(h3) {
+    --flow-space: var(--blog-flow-lg);
+  }
+  .prose :where(h2, h3, h4) + :where(p, ul, ol, pre, blockquote, table) {
+    --flow-space: var(--blog-flow-sm);
+  }
+  .prose :where(h2, h3, h4, h5, h6) + :where(h2, h3, h4, h5, h6) {
+    --flow-space: var(--blog-flow-2xs);
+  }
+  .prose > :first-child {
+    margin-block-start: 0;
+  }
+
+  .prose :where(h2) {
+    font-size: var(--blog-text-xl);
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .prose :where(h3) {
+    font-size: var(--blog-text-lg);
+    line-height: 1.25;
+    font-weight: 700;
+  }
+  .prose :where(p) {
+    text-wrap: pretty;
+  }
+  .prose :where(a) {
+    color: var(--blog-accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+  .prose :where(a:hover) {
+    color: var(--blog-accent-hover);
+  }
+  .prose :where(strong) {
+    font-weight: 700;
+    color: var(--blog-fg);
+  }
+  .prose :where(ul, ol) {
+    padding-inline-start: 1.5rem;
+  }
+  .prose :where(li) {
+    margin-block-start: var(--blog-flow-2xs);
+  }
+  .prose :where(code):not(pre code) {
+    font-family: var(--blog-font-mono);
+    font-size: 0.88em;
+    background: var(--blog-code-bg);
+    color: var(--blog-code-fg);
+    padding: 0.12em 0.4em;
+    border-radius: 0.3rem;
+  }
+  .prose :where(pre) {
+    font-family: var(--blog-font-mono);
+    font-size: var(--blog-text-sm);
+    background: var(--blog-block-bg);
+    color: var(--blog-block-fg);
+    padding: 1rem 1.15rem;
+    border-radius: var(--blog-radius-md);
+    overflow-x: auto;
+    line-height: 1.6;
+  }
+  .prose :where(pre code) {
+    background: none;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+  }
+  .prose :where(blockquote) {
+    margin-inline: 0;
+    padding: 0.4rem 0 0.4rem 1.1rem;
+    border-inline-start: 3px solid var(--blog-accent);
+    color: var(--blog-fg-muted);
+    font-style: italic;
+  }
+  .prose :where(hr) {
+    border: none;
+    border-block-start: 1px solid var(--blog-border);
+  }
+
+  /* ── Note admonition (custom MDX component) ─────────────────────────── */
+  .admonition {
+    --flow-space: var(--blog-flow-lg);
+    display: block;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--blog-border);
+    border-inline-start: 3px solid var(--blog-accent);
+    border-radius: var(--blog-radius-sm);
+    background: var(--blog-accent-soft);
+  }
+
+  .admonition__title {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: var(--blog-text-sm);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--blog-accent);
+  }
+
+  .admonition__title::before {
+    content: "i";
+    display: inline-grid;
+    place-items: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    border-radius: 999px;
+    background: var(--blog-accent);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-style: normal;
+    font-family: var(--blog-font-sans);
+  }
+
+  .admonition__body {
+    margin-block-start: 0.5rem;
+    font-size: var(--blog-text-sm);
+    color: var(--blog-fg-muted);
+  }
+
+  .admonition__body > :first-child {
+    margin-block-start: 0;
+  }
+
+  .admonition__body :where(code) {
+    background: color-mix(in srgb, var(--blog-fg) 8%, transparent);
+  }
+}

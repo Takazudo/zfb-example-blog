@@ -8,7 +8,6 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "setup:upstream": "node scripts/setup-upstream.mjs",
     "predev": "rm -rf dist .zfb .zfb-build",
     "dev": "zfb dev",
     "build": "zfb build",
