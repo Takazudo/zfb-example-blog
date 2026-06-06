@@ -9,10 +9,10 @@ importers:
   .:
     dependencies:
       '@takazudo/zfb':
-        specifier: ^0.1.0-next.31
+        specifier: 0.1.0-next.31
         version: 0.1.0-next.31
       '@takazudo/zfb-runtime':
-        specifier: ^0.1.0-next.31
+        specifier: 0.1.0-next.31
         version: 0.1.0-next.31(@takazudo/zfb@0.1.0-next.31)
       preact:
         specifier: ^10.22.0
