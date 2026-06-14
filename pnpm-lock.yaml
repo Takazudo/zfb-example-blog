@@ -12,8 +12,8 @@ importers:
         specifier: 0.1.0-next.44
         version: 0.1.0-next.44
       '@takazudo/zfb-runtime':
-        specifier: 0.1.0-next.38
-        version: 0.1.0-next.38(@takazudo/zfb@0.1.0-next.44)
+        specifier: 0.1.0-next.44
+        version: 0.1.0-next.44(@takazudo/zfb@0.1.0-next.44)
       preact:
         specifier: ^10.22.0
         version: 10.29.2
@@ -50,11 +50,11 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@takazudo/zfb-runtime@0.1.0-next.38':
-    resolution: {integrity: sha512-yPyW7nixnY6YDi+icuWd7mPYrLU4szX7J8Y4+9Iu2tQIcOXv+kMqbfKTdFDJNRPnsu7hOBhRCQSNr8b7pCkJKQ==}
+  '@takazudo/zfb-runtime@0.1.0-next.44':
+    resolution: {integrity: sha512-sZX9wdAIM54X5LjwuSDFw4VG6VoyQ8GZbiKVyl9O//F7ZyFuuVVF2d3MZCS5J6PxRG/fOm0F6su8atkCZJngTg==}
     engines: {node: '>=22.0.0', pnpm: '>=10.0.0'}
     peerDependencies:
-      '@takazudo/zfb': 0.1.0-next.38
+      '@takazudo/zfb': 0.1.0-next.44
 
   '@takazudo/zfb-win32-x64-msvc@0.1.0-next.44':
     resolution: {integrity: sha512-pZHPxZpFFmBvtZPo75kCQtly9DYtc2/gA6hgXkxhTlhAFlDmOe3IfaYiWDnGBMN0Gv8K/IcbakO0oRsaaEzp4Q==}
@@ -103,7 +103,7 @@ snapshots:
   '@takazudo/zfb-linux-x64-gnu@0.1.0-next.44':
     optional: true
 
-  '@takazudo/zfb-runtime@0.1.0-next.38(@takazudo/zfb@0.1.0-next.44)':
+  '@takazudo/zfb-runtime@0.1.0-next.44(@takazudo/zfb@0.1.0-next.44)':
     dependencies:
       '@takazudo/zfb': 0.1.0-next.44
       hono: 4.12.23
