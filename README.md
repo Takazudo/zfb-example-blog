@@ -4,7 +4,7 @@ A polished, Tailwind-styled blog built with [zfb](https://github.com/Takazudo/zu
 (`zudo-front-builder`) — a Rust-orchestrated static site builder with
 server-rendered Preact pages and selective client-side hydration ("islands").
 
-**Live demo:** https://zfb-example-blog.pages.dev/
+**Live demo:** https://zfb-example-blog.takazudomodular.com/
 
 This is one of three official standalone zfb example sites. It demonstrates the
 smallest realistic shape of a content-driven zfb project:
@@ -62,26 +62,65 @@ zfb.config.ts      framework: preact, tailwind enabled, blog collection
 
 ## Deployment
 
-Pushes to `main` are deployed to Cloudflare Pages by
-[`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml). The workflow
-runs `pnpm install` + `pnpm build` and deploys `dist/` to the
-`zfb-example-blog` Pages project. It needs the repo secrets
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+Pushes to `main` are deployed to **Cloudflare Workers** (static assets) by
+[`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml), and served at
+the custom domain **https://zfb-example-blog.takazudomodular.com/**.
+
+The site is a pure static build, so the Worker is **assets-only**: there is no
+Worker script, just `dist/` served from Cloudflare's edge. All of that is
+declared in [`wrangler.toml`](./wrangler.toml); `wrangler deploy` both uploads
+the assets and attaches the custom domain.
+
+The workflow has three jobs:
+
+| Job       | Runs on            | What it does                                                     |
+| --------- | ------------------ | ---------------------------------------------------------------- |
+| `build`   | every push and PR  | `pnpm typecheck` + `pnpm build`. No credentials — forks stay green. |
+| `deploy`  | push to `main`     | `wrangler deploy`, then the live-site smoke test.                  |
+| `preview` | pull requests      | Uploads a preview version and comments its URL on the PR.          |
+
+It needs the repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`;
+the credentialed jobs self-skip when the token is absent.
 
 For an ordered "from zero to deployed" walkthrough — creating the token,
 setting the secrets, triggering, verifying, and troubleshooting — see
 [`docs/cloudflare-setup.md`](./docs/cloudflare-setup.md).
 
+### Post-deploy smoke test
+
+[`scripts/smoke.mjs`](./scripts/smoke.mjs) runs after every production deploy
+and checks the real hostname over the network: a literal `200` (redirects are
+not followed), and page content unique to this blog on both the homepage and a
+post route. A deploy can report success while the custom domain is unattached
+or serving something else — this is the only check that can see that.
+
+It **skips cleanly** (exit 0) while the domain has no DNS record yet, so the
+repo is not red-by-design before Cloudflare is wired up. Once the name resolves,
+every failure is a real failure. Run it by hand against any host with:
+
+```sh
+SMOKE_BASE_URL=https://zfb-example-blog.takazudomodular.com node scripts/smoke.mjs
+```
+
 ### Cloudflare API token permissions
 
-The `CLOUDFLARE_API_TOKEN` repo secret is an **Account**-scoped custom token
-(Cloudflare dashboard → My Profile → API Tokens → Create Custom Token) with
-these permissions:
+The `CLOUDFLARE_API_TOKEN` repo secret is a custom token (Cloudflare dashboard →
+My Profile → API Tokens → Create Custom Token) with these permissions:
 
-- **Cloudflare Pages** — Edit
-- **Account Settings** — Read
+| Type    | Resource         | Level |
+| ------- | ---------------- | ----- |
+| Account | Workers Scripts  | Edit  |
+| Account | Account Settings | Read  |
+| Zone    | Workers Routes   | Edit  |
 
-Set **Account Resources → Include → (your account)**. No Zone permissions are
-needed — this repo deploys to a `*.pages.dev` host, not a custom domain. A
-single token can be shared across all `zfb-example-*` repos if it carries the
+Set **Account Resources → Include → (your account)**, and **Zone Resources →
+Include → takazudomodular.com**.
+
+**Zone · Workers Routes — Edit is required** because this repo serves a custom
+domain. Without it `wrangler deploy` uploads the Worker and then fails when it
+tries to create the route, and the domain never resolves. (This is the one
+permission the older Pages-era setup did not need, and the reason the migration
+notes say a deploy can fail on the route step alone.)
+
+A single token can be shared across all `zfb-example-*` repos if it carries the
 union of every repo's permissions.
