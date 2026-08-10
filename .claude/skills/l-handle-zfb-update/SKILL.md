@@ -2,19 +2,19 @@
 name: l-handle-zfb-update
 description: >-
   Update the zfb upstream dependency (@takazudo/zfb + @takazudo/zfb-runtime) to
-  the latest "next" dist-tag release, review the upstream changes between
-  versions, and adapt this project's code if needed. Use when: (1) User says
-  'update zfb', 'bump zfb', 'zfb update', or 'handle zfb update', (2) A new zfb
-  next release is out and this example blog should track it.
+  the latest stable release, review the upstream changes between versions, and
+  adapt this project's code if needed. Use when: (1) User says 'update zfb',
+  'bump zfb', 'zfb update', or 'handle zfb update', (2) A new zfb release is out
+  and this example blog should track it.
 user-invocable: true
-argument-hint: "[target-version, e.g. 0.1.0-next.42 — omit to use latest next]"
+argument-hint: "[target-version, e.g. 2.3.0 — omit to use the latest stable]"
 ---
 
 # Handle zfb Update
 
-Update `@takazudo/zfb` and `@takazudo/zfb-runtime` to the latest `next`
-prerelease, check what changed upstream, and adapt this project's code when an
-upstream change touches a feature this blog actually uses.
+Update `@takazudo/zfb` and `@takazudo/zfb-runtime` to the latest stable release,
+check what changed upstream, and adapt this project's code when an upstream
+change touches a feature this blog actually uses.
 
 Upstream repo: `Takazudo/zudo-front-builder` (monorepo; the npm packages live
 under `packages/`). Every release has a `v<version>` tag and a GitHub release
@@ -30,16 +30,18 @@ touching them.
 
 ```bash
 CURRENT=$(node -p "require('./package.json').dependencies['@takazudo/zfb']")
-TARGET=$(npm view @takazudo/zfb dist-tags.next)
+TARGET=$(npm view @takazudo/zfb dist-tags.latest)
 ```
 
-- **Always resolve the target from the `next` dist-tag, never `latest`** —
-  this project tracks the zfb prerelease line. The two tags may be equal
-  today, but when they diverge, `next` is the one to follow.
+- **Always resolve the target from the `latest` dist-tag, never `next`** — this
+  project tracks the zfb stable line. The `next` prerelease line ENDED at
+  `1.1.0-next.1`, which is a prerelease of the already-released `1.1.0`; the
+  `next` dist-tag still points there and is now permanently behind. Following
+  it would pin this repo to a superseded prerelease.
 - If the user passed a version argument, use it as `TARGET` instead. Verify it
   exists for **both** packages: `npm view "@takazudo/zfb@<TARGET>" version`
   and `npm view "@takazudo/zfb-runtime@<TARGET>" version`.
-- **If `CURRENT` equals `TARGET`: report "already at the latest next
+- **If `CURRENT` equals `TARGET`: report "already at the latest stable
   (<version>)" and STOP.**
 - **If `TARGET` is older than `CURRENT`** (possible with an explicit version
   argument): that is a downgrade — stop and ask the user to confirm before
@@ -152,7 +154,7 @@ it usually points at an upstream change that needs a project-side adaptation
 
 Summarize for the user:
 
-- Versions traversed (e.g. `next.31 → next.35`)
+- Versions traversed (e.g. `2.1.0 → 2.3.0`)
 - Notable upstream changes per release (one line each)
 - Adaptations made to project code (or "none needed")
 - Verification results (build page count, typecheck, dist inspection, smoke test)
