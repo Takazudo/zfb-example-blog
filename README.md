@@ -68,6 +68,10 @@ runs `pnpm install` + `pnpm build` and deploys `dist/` to the
 `zfb-example-blog` Pages project. It needs the repo secrets
 `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
 
+For an ordered "from zero to deployed" walkthrough — creating the token,
+setting the secrets, triggering, verifying, and troubleshooting — see
+[`docs/cloudflare-setup.md`](./docs/cloudflare-setup.md).
+
 ### Cloudflare API token permissions
 
 The `CLOUDFLARE_API_TOKEN` repo secret is an **Account**-scoped custom token
