@@ -1,0 +1,60 @@
+# Cloudflare Workers Static Assets configuration.
+#
+# This site is a pure static SSG build (`zfb build` -> dist/). There is no SSR
+# worker code, so this is an ASSETS-ONLY Worker: no `main` key, no
+# `compatibility_flags`. Sibling zfb examples that DO run server code
+# (json-api, webshop, ...) set `main = "./dist/_worker.js"` plus
+# `compatibility_flags = ["nodejs_compat"]` because their Cloudflare adapter
+# bundle imports node:async_hooks — this repo has no
+# @takazudo/zfb-adapter-cloudflare dependency and needs neither.
+
+name = "zfb-example-blog"
+compatibility_date = "2024-12-01"
+
+# Top-level fields (MUST stay above the [assets] table — in TOML any key after
+# a table header is scoped into that table; if these sit under [assets] wrangler
+# warns "Unexpected fields found in assets field" and silently ignores them).
+#
+# workers_dev enables the worker's PUBLIC *.workers.dev subdomain. It is
+# REQUIRED for the preview-alias URLs below to actually route: with workers_dev
+# disabled, Cloudflare still PRINTS the pr-<N> preview-alias URL at upload time,
+# but the edge rejects requests to it with "error code: 1042" (the workers.dev
+# hostname is private). Production is also served on the custom domain at the
+# bottom of this file; enabling this additionally exposes the site on
+# workers.dev, which is fine — the content is a public example site.
+workers_dev = true
+
+# preview_urls enables *.workers.dev version-preview URLs for PR deploys
+# (consumed by deploy.yml via `wrangler versions upload --preview-alias`).
+# It defaults to *match* workers_dev, so leaving it implicit is how preview URLs
+# silently disappear the day someone sets workers_dev = false. Set explicitly.
+preview_urls = true
+
+# ---------------------------------------------------------------------------
+# Static asset serving
+#
+# NOTE: no `binding` key here. An assets-only Worker (no `main`) rejects it —
+# `wrangler deploy` hard-errors with "Cannot use assets with a binding in an
+# assets-only Worker." The binding exists so Worker code can call
+# env.ASSETS.fetch(); with no Worker script there is nothing to bind to.
+#
+# not_found_handling = "404-page" serves dist/404.html for unmatched GETs.
+# zfb does not currently emit a 404.html for this project, so unmatched paths
+# fall back to a bare Cloudflare 404 today; the setting is already correct for
+# when a 404 page is added.
+# ---------------------------------------------------------------------------
+[assets]
+directory = "./dist"
+not_found_handling = "404-page"
+
+# ---------------------------------------------------------------------------
+# Custom domain routing.
+#
+# custom_domain = true makes Cloudflare create and manage the DNS record and
+# TLS cert for this hostname. It requires the deploy token to carry
+# `Zone · Workers Routes · Edit` on the takazudomodular.com zone — an
+# account-scoped Workers-Scripts token is NOT enough. See docs/cloudflare-setup.md.
+# ---------------------------------------------------------------------------
+[[routes]]
+pattern = "zfb-example-blog.takazudomodular.com"
+custom_domain = true
