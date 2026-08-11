@@ -100,10 +100,16 @@ jobs:
 
       # Only an over-the-wire check can prove the custom domain is actually
       # attached and serving this site; the deploy step above succeeds even when
-      # the domain is not yet reachable. Self-skips while the domain does not
-      # resolve — see scripts/smoke.mjs.
+      # the domain is not yet reachable.
+      #
+      # SMOKE_REQUIRE_LIVE turns the script's "domain is not up yet" skips into
+      # failures. The custom domain for this repo is attached and serving, so a
+      # skip here would mean the site fell off the internet — which must be red,
+      # not a ::notice:: nobody reads. See scripts/smoke.mjs.
       - name: Smoke test the live site
         if: steps.preflight.outputs.ready == 'true'
+        env:
+          SMOKE_REQUIRE_LIVE: "1"
         run: node scripts/smoke.mjs
 
   preview:
