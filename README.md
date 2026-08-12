@@ -18,8 +18,9 @@ smallest realistic shape of a content-driven zfb project:
 - A Tailwind v4 `@theme` + CSS-custom-property design system with a
   light/dark theme driven by a `data-theme` attribute.
 
-`zfb build` emits **14 fully-rendered HTML pages**: 1 homepage, 5 posts,
-2 paginated index pages (pageSize 3 over 5 posts), and 6 tag pages.
+`zfb build` emits **15 fully-rendered HTML pages**: 1 homepage, 5 posts,
+2 paginated index pages (pageSize 3 over 5 posts), 6 tag pages, and 1 error
+page (`404.html`).
 
 ## Dependencies
 
@@ -44,7 +45,7 @@ Requires Node.js >= 22.12.0 and pnpm 10.x.
 | Command            | What it does                                              |
 | ------------------ | --------------------------------------------------------- |
 | `pnpm dev`         | Start the zfb dev server with live reload.                |
-| `pnpm build`       | Build the static site into `dist/` (14 pages).            |
+| `pnpm build`       | Build the static site into `dist/` (15 pages).            |
 | `pnpm preview`     | Serve the built `dist/` locally.                          |
 | `pnpm typecheck`   | Run `zfb check` (collection validation + `tsc --noEmit`). |
 
@@ -56,6 +57,7 @@ components/        note.tsx (MDX component), theme-toggle.tsx (island)
 layouts/           default.tsx — shared page chrome
 lib/               types.ts — shared BlogEntry/frontmatter types
 pages/             index.tsx + dynamic routes ([slug], page/[page], tags/[tag])
+                   404.tsx — emits a flat dist/404.html (see wrangler.toml)
 styles/            global.css — Tailwind v4 @theme + design tokens
 zfb.config.ts      framework: preact, tailwind enabled, blog collection
 ```
@@ -89,10 +91,13 @@ setting the secrets, triggering, verifying, and troubleshooting — see
 ### Post-deploy smoke test
 
 [`scripts/smoke.mjs`](./scripts/smoke.mjs) runs after every production deploy
-and checks the real hostname over the network: a literal `200` (redirects are
-not followed), and page content unique to this blog on both the homepage and a
-post route. A deploy can report success while the custom domain is unattached
-or serving something else — this is the only check that can see that.
+and checks the real hostname over the network: each check asserts an exact
+status (redirects are not followed) plus page content unique to this blog — a
+literal `200` on the homepage and a post route, and a `404` serving our own
+error page on an unmatched path, which is the only way to prove
+`not_found_handling` actually works at the edge. A deploy can report success
+while the custom domain is unattached or serving something else — this is the
+only check that can see that.
 
 It **skips cleanly** (exit 0) while the domain has no DNS record yet, so the
 repo is not red-by-design before Cloudflare is wired up. Once the name resolves,
