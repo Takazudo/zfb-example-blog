@@ -39,9 +39,10 @@ preview_urls = true
 # env.ASSETS.fetch(); with no Worker script there is nothing to bind to.
 #
 # not_found_handling = "404-page" serves dist/404.html for unmatched GETs.
-# zfb does not currently emit a 404.html for this project, so unmatched paths
-# fall back to a bare Cloudflare 404 today; the setting is already correct for
-# when a 404 page is added.
+# pages/404.tsx supplies it: zfb special-cases a top-level 404.tsx and emits a
+# FLAT dist/404.html (not dist/404/index.html, which is what every other route
+# gets), and that exact filename is the one this setting looks for. `zfb preview`
+# serves the same file, so local preview matches production.
 # ---------------------------------------------------------------------------
 [assets]
 directory = "./dist"
