@@ -21,10 +21,11 @@
 //
 //   Deciding this from DNS rather than from fetch() error codes keeps the skip
 //   set as narrow as it can be. Once the name resolves, a refused connection, a
-//   TLS error, a 5xx, a 404, a redirect, or a 200 carrying the wrong HTML all
-//   mean the deploy is genuinely broken and must go red. Note that a resolver
-//   failure (SERVFAIL/REFUSED/timeout) is NOT "the domain does not exist" — it
-//   is a broken lookup, and it fails rather than skipping.
+//   TLS error, a 5xx, an UNEXPECTED status (see `status` on each check below), a
+//   redirect, or the right status carrying the wrong HTML all mean the deploy is
+//   genuinely broken and must go red. Note that a resolver failure
+//   (SERVFAIL/REFUSED/timeout) is NOT "the domain does not exist" — it is a
+//   broken lookup, and it fails rather than skipping.
 //
 //   Two states get past that DNS gate while the domain is still coming up, and
 //   both would otherwise turn a perfectly working deploy red:
@@ -56,9 +57,22 @@ const BASE_URL =
 // When set, every skip below becomes exit 1. See the header.
 const REQUIRE_LIVE = /^(1|true)$/i.test(process.env.SMOKE_REQUIRE_LIVE ?? "");
 
-// Content markers, taken from the real `zfb build` output. A 200 alone proves
-// almost nothing (a parked page, or the old Pages deploy, also returns 200) —
-// these strings prove THIS blog is what the domain serves.
+// Content markers, taken from the real `zfb build` output. The status alone
+// proves almost nothing (a parked page, or the old Pages deploy, also returns
+// 200) — these strings prove THIS blog is what the domain serves.
+//
+// `status` defaults to 200. The 404 entry is the only one that overrides it:
+// wrangler.toml sets not_found_handling = "404-page", which is pure edge
+// behaviour — no build or unit check can observe it, so an over-the-wire
+// assertion is the only thing that can prove unmatched paths serve our styled
+// page rather than Cloudflare's bare bodyless 404.
+//
+// `retryOnMarkerMismatch` exists solely for that 404 check. Normally a correct
+// status with a missing marker is NOT retried — it means the wrong site is being
+// served, which is never transient. But the pre-deploy version of this site has
+// no 404.html, so during edge propagation right after a deploy the synthetic
+// path below still answers 404 with no marker. Without this opt-in, the very
+// deploy that introduces the 404 page would fail on itself.
 const CHECKS = [
   {
     path: "/",
@@ -69,6 +83,15 @@ const CHECKS = [
     path: "/blog/hello-zfb/",
     label: "blog post route",
     markers: ["<title>Hello, zfb</title>"],
+  },
+  {
+    // Deliberately synthetic: this must never become a real route, or the check
+    // would start asserting a 404 on a page that legitimately exists.
+    path: "/__smoke-404-does-not-exist/",
+    label: "custom 404 page",
+    status: 404,
+    markers: ["<title>Page not found · basic-blog</title>", "<h1>Page not found</h1>"],
+    retryOnMarkerMismatch: true,
   },
 ];
 
@@ -159,26 +182,29 @@ function notReadyReason(codes, { hostname, ipv4, ipv6 }) {
  * Fetch one URL and verify status + markers.
  *
  * redirect: "manual" is deliberate — the requirement is that the custom domain
- * itself answers 200. Following redirects would let a redirect to the old
- * Pages deploy pass as success.
+ * itself answers with the expected status. Following redirects would let a
+ * redirect to the old Pages deploy pass as success, and a 3xx is an unexpected
+ * status for every check regardless of what it expects.
  *
- * Retries transient conditions (network/TLS errors, timeouts, non-200) to ride
- * out edge propagation right after a deploy. A 200 whose body is missing the
- * markers is NOT retried — that is the wrong site being served, not a transient.
+ * Retries transient conditions (network/TLS errors, timeouts, wrong status) to
+ * ride out edge propagation right after a deploy. A response with the RIGHT
+ * status but missing markers is normally NOT retried — that is the wrong site
+ * being served, not a transient — unless the check opts in via
+ * `retryOnMarkerMismatch` (see the 404 entry in CHECKS for why).
  */
-async function checkOnce(url, markers) {
+async function checkOnce(url, markers, expectedStatus, retryOnMarkerMismatch) {
   const response = await fetch(url, {
     redirect: "manual",
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: { "user-agent": "zfb-example-blog-smoke/1.0" },
   });
 
-  if (response.status !== 200) {
+  if (response.status !== expectedStatus) {
     const where = response.headers.get("location");
     return {
       ok: false,
       retryable: true,
-      detail: `HTTP ${response.status}${where ? ` -> ${where}` : ""}`,
+      detail: `expected HTTP ${expectedStatus}, received HTTP ${response.status}${where ? ` -> ${where}` : ""}`,
     };
   }
 
@@ -187,8 +213,8 @@ async function checkOnce(url, markers) {
   if (missing.length > 0) {
     return {
       ok: false,
-      retryable: false,
-      detail: `HTTP 200 but body is missing marker(s): ${missing.map((m) => JSON.stringify(m)).join(", ")}`,
+      retryable: retryOnMarkerMismatch === true,
+      detail: `HTTP ${expectedStatus} but body is missing marker(s): ${missing.map((m) => JSON.stringify(m)).join(", ")}`,
     };
   }
 
@@ -201,13 +227,13 @@ async function checkOnce(url, markers) {
  * first: if the domain finishes converging mid-run we want the real assertions,
  * not a skip.
  */
-async function runCheck({ path, label, markers }, dns) {
+async function runCheck({ path, label, markers, status = 200, retryOnMarkerMismatch = false }, dns) {
   const url = new URL(path, BASE_URL).toString();
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let result;
     try {
-      result = await checkOnce(url, markers);
+      result = await checkOnce(url, markers, status, retryOnMarkerMismatch);
     } catch (err) {
       // fetch() wraps the real reason on .cause; surface it so a failure log is
       // actionable rather than a bare "fetch failed".

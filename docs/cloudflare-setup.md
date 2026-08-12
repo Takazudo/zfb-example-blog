@@ -109,11 +109,13 @@ the same check by hand:
 node scripts/smoke.mjs
 ```
 
-It asserts a literal `200` (redirects are not followed, so a redirect back to
-the old Pages site cannot pass), and that the returned HTML contains content
-unique to this blog, on both `/` and `/blog/hello-zfb/`. While the domain has no
-DNS record it prints a `::notice::` and exits 0; once the name resolves, any
-failure is a real failure.
+It asserts an exact status per check (redirects are not followed, so a redirect
+back to the old Pages site cannot pass), plus HTML content unique to this blog:
+a literal `200` on both `/` and `/blog/hello-zfb/`, and a `404` on an unmatched
+path that must serve our own error page rather than Cloudflare's bare one —
+the only way to prove `not_found_handling = "404-page"` works at the edge.
+While the domain has no DNS record it prints a `::notice::` and exits 0; once
+the name resolves, any failure is a real failure.
 
 A quick manual check:
 
