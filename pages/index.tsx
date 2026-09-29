@@ -1,5 +1,5 @@
 import DefaultLayout from "../layouts/default";
-import type { BlogEntry } from "../lib/types";
+import type { BlogEntry, BlogFrontmatter } from "../lib/types";
 
 /**
  * The homepage lists every post in the `blog` collection, newest first. We
@@ -8,7 +8,7 @@ import type { BlogEntry } from "../lib/types";
  */
 export async function getStaticProps() {
   const { getCollection } = await import("@takazudo/zfb/content");
-  const posts = (await getCollection("blog")) as BlogEntry[];
+  const posts = await getCollection<BlogFrontmatter>("blog");
   // Avoid mutating the array returned by `getCollection`: future
   // implementations may share the array between routes, and a sort()
   // call here would silently re-order it for everyone.
@@ -36,7 +36,7 @@ export default function HomePage({ posts }: Props) {
           <li key={post.slug}>
             <a href={`/blog/${post.slug}`}>{post.data.title}</a>
             <div class="post-meta">
-              <time dateTime={post.data.date}>{post.data.date}</time>
+              <time datetime={post.data.date}>{post.data.date}</time>
               {post.data.description ? <> · {post.data.description}</> : null}
             </div>
           </li>

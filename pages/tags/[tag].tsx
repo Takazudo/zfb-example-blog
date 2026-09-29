@@ -1,5 +1,5 @@
 import DefaultLayout from "../../layouts/default";
-import type { BlogEntry } from "../../lib/types";
+import type { BlogEntry, BlogFrontmatter } from "../../lib/types";
 
 /**
  * One static page per unique tag. The renderer evaluates `paths()` once,
@@ -8,7 +8,7 @@ import type { BlogEntry } from "../../lib/types";
  */
 export async function paths() {
   const { getCollection } = await import("@takazudo/zfb/content");
-  const posts = (await getCollection("blog")) as BlogEntry[];
+  const posts = await getCollection<BlogFrontmatter>("blog");
   const byTag = new Map<string, BlogEntry[]>();
   for (const post of posts) {
     for (const tag of post.data.tags ?? []) {
@@ -45,7 +45,7 @@ export default function TagPage({ tag, posts }: Props) {
           <li key={post.slug}>
             <a href={`/blog/${post.slug}`}>{post.data.title}</a>
             <div class="post-meta">
-              <time dateTime={post.data.date}>{post.data.date}</time>
+              <time datetime={post.data.date}>{post.data.date}</time>
             </div>
           </li>
         ))}

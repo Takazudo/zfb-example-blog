@@ -18,7 +18,7 @@ version. A Rust binary gets all of that for free, and the user does not
 need to think about which package manager pulled it down.
 
 The flip side is the rendering pipeline itself, which is decidedly _not_
-Rust. Pages render through a JavaScript runtime so authors can keep using
-Preact, JSX, and the rest of the npm ecosystem. The split is intentional:
+Rust. Pages render through a JavaScript runtime so authors can keep writing
+JSX components and using the rest of the npm ecosystem. The split is intentional:
 the orchestrator is Rust, the renderer is JS, and the seam between them
 is small enough to keep honest.

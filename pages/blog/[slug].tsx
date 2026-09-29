@@ -2,7 +2,7 @@ import { defaultComponents } from "@takazudo/zfb";
 
 import Note from "../../components/note";
 import DefaultLayout from "../../layouts/default";
-import type { BlogEntry } from "../../lib/types";
+import type { BlogEntry, BlogFrontmatter } from "../../lib/types";
 
 /**
  * Per-post route. The `paths()` export is what the renderer evaluates to
@@ -11,7 +11,7 @@ import type { BlogEntry } from "../../lib/types";
  */
 export async function paths() {
   const { getCollection } = await import("@takazudo/zfb/content");
-  const posts = (await getCollection("blog")) as BlogEntry[];
+  const posts = await getCollection<BlogFrontmatter>("blog");
   return posts.map((post) => ({
     params: { slug: post.slug },
     props: { post },
@@ -30,7 +30,7 @@ export default function BlogPostPage({ post }: Props) {
         <header class="post-header">
           <h1>{post.data.title}</h1>
           <p class="post-meta">
-            <time dateTime={post.data.date}>{post.data.date}</time>
+            <time datetime={post.data.date}>{post.data.date}</time>
           </p>
         </header>
         <div class="prose">
