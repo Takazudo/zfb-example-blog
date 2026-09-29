@@ -1,8 +1,9 @@
 # zfb-example-blog
 
-A polished, Tailwind-styled blog built with [zfb](https://github.com/Takazudo/zudo-front-builder)
-(`zudo-front-builder`) — a Rust-orchestrated static site builder with
-server-rendered Preact pages and selective client-side hydration ("islands").
+A polished blog built with [zfb](https://github.com/Takazudo/zudo-front-builder)
+(`zudo-front-builder`) 3.x — a Rust-orchestrated static site builder with
+server-rendered pages written in zfb's own JSX runtime (zudo-react) and
+selective client-side hydration ("islands").
 
 **Live demo:** https://zfb-example-blog.takazudomodular.com/
 
@@ -13,10 +14,14 @@ smallest realistic shape of a content-driven zfb project:
 - File-based routing with three dynamic-route shapes — per-post pages,
   paginated index pages, and per-tag pages.
 - A custom MDX component (`<Note>`) delivered through the `components` prop.
-- A `"use client"` island (`ThemeToggle`) with an SSR-safe first render and a
-  pre-hydration script that avoids a flash of the wrong theme.
-- A Tailwind v4 `@theme` + CSS-custom-property design system with a
-  light/dark theme driven by a `data-theme` attribute.
+- A `"use client"` island (`ThemeToggle`) written with zudo-react signals: an
+  SSR-safe first render, browser-only work in `onActivate`, and a
+  pre-hydration script (inserted with `rawHtml`) that avoids a flash of the
+  wrong theme.
+- An authored-CSS design system built on `--blog-*` custom properties, with a
+  light/dark theme driven by a `data-theme` attribute. There are no utility
+  classes; zudo-wind (zfb's built-in CSS engine) only supplies the `owned-v1`
+  reset configured in `zfb.config.ts`.
 
 `zfb build` emits **15 fully-rendered HTML pages**: 1 homepage, 5 posts,
 2 paginated index pages (pageSize 3 over 5 posts), 6 tag pages, and 1 error
@@ -58,8 +63,8 @@ layouts/           default.tsx — shared page chrome
 lib/               types.ts — shared BlogEntry/frontmatter types
 pages/             index.tsx + dynamic routes ([slug], page/[page], tags/[tag])
                    404.tsx — emits a flat dist/404.html (see wrangler.toml)
-styles/            global.css — Tailwind v4 @theme + design tokens
-zfb.config.ts      framework: preact, tailwind enabled, blog collection
+styles/            global.css — design tokens + authored layout/prose CSS
+zfb.config.ts      wind reset (owned-v1), blog collection
 ```
 
 ## Deployment
@@ -101,9 +106,12 @@ only check that can see that.
 
 It **skips cleanly** (exit 0) while the domain has no DNS record yet, so the
 repo is not red-by-design before Cloudflare is wired up. Once the name resolves,
-every failure is a real failure. Run it by hand against any host with:
+every failure is a real failure. Run it by hand against any host — for a local check, point it at
+`pnpm preview` on an explicit port rather than production:
 
 ```sh
+pnpm preview --port 4321 --host 127.0.0.1   # in another terminal
+SMOKE_BASE_URL=http://127.0.0.1:4321 node scripts/smoke.mjs
 SMOKE_BASE_URL=https://zfb-example-blog.takazudomodular.com node scripts/smoke.mjs
 ```
 

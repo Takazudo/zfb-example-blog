@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 import { Island } from "@takazudo/zfb";
 
 import ThemeToggle from "../components/theme-toggle";
@@ -26,7 +26,7 @@ const THEME_BOOTSTRAP_SCRIPT = `(() => {
 
 type Props = {
   title?: string;
-  children: ComponentChildren;
+  children: Child;
 };
 
 /**
@@ -38,7 +38,7 @@ export default function DefaultLayout({ title = "basic-blog · zfb example", chi
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title}</title>
         {/* Inline SVG favicon mirroring the .site-title::before brand glyph. */}
@@ -47,8 +47,12 @@ export default function DefaultLayout({ title = "basic-blog · zfb example", chi
           type="image/svg+xml"
           href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232d5fd6'/><stop offset='1' stop-color='%237b9bff'/></linearGradient></defs><rect width='16' height='16' rx='4' fill='url(%23g)'/></svg>"
         />
-        {/* Apply theme before paint to avoid FOUC. See script doc above. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+        {/*
+          Apply theme before paint to avoid FOUC. See script doc above.
+          `rawHtml` inserts the string verbatim — it is not a sanitizer, and is
+          only safe here because THEME_BOOTSTRAP_SCRIPT is a trusted constant.
+        */}
+        <script rawHtml={THEME_BOOTSTRAP_SCRIPT} />
       </head>
       <body>
         <header class="site-header">

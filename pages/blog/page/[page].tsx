@@ -1,7 +1,7 @@
 import type { PaginatedPage } from "@takazudo/zfb/paginate";
 
 import DefaultLayout from "../../../layouts/default";
-import type { BlogEntry } from "../../../lib/types";
+import type { BlogEntry, BlogFrontmatter } from "../../../lib/types";
 
 /**
  * Paginated index of blog posts. With `pageSize: 3` and 5 posts the runtime
@@ -12,7 +12,7 @@ import type { BlogEntry } from "../../../lib/types";
 export async function paths() {
   const { getCollection } = await import("@takazudo/zfb/content");
   const { paginate } = await import("@takazudo/zfb/paginate");
-  const posts = (await getCollection("blog")) as BlogEntry[];
+  const posts = await getCollection<BlogFrontmatter>("blog");
   const sorted = [...posts].sort((a, b) => b.data.date.localeCompare(a.data.date));
   return paginate(sorted, { pageSize: 3, param: "page" });
 }
@@ -37,7 +37,7 @@ export default function BlogIndexPage({ page }: Props) {
           <li key={post.slug}>
             <a href={`/blog/${post.slug}`}>{post.data.title}</a>
             <div class="post-meta">
-              <time dateTime={post.data.date}>{post.data.date}</time>
+              <time datetime={post.data.date}>{post.data.date}</time>
               {post.data.description ? <> · {post.data.description}</> : null}
             </div>
           </li>

@@ -1,4 +1,4 @@
-import type { ComponentChildren } from "preact";
+import type { Child } from "@takazudo/zfb/zudo-react";
 
 type Props = {
   /**
@@ -7,7 +7,7 @@ type Props = {
    * label.
    */
   title?: string;
-  children: ComponentChildren;
+  children: Child;
 };
 
 /**
