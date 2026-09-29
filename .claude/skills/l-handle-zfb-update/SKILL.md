@@ -94,7 +94,7 @@ Flag anything that touches a surface this project uses:
 | Upstream surface | Where this project uses it |
 | --- | --- |
 | `defineConfig` schema (`@takazudo/zfb/config`) | `zfb.config.ts` — `base`, `wind` (`reset: "owned-v1"`, `authoredClasses`), `collections` |
-| zudo-wind reset + candidate scanning | `owned-v1` reset under all authored CSS; every `class="…"` token is scanned — BEM `__` names need `wind.authoredClasses` (zfb#3365). Watch reset contents and candidate-grammar changes |
+| zudo-wind reset + candidate scanning | `owned-v1` reset under all authored CSS, plus a preflight-parity block in `styles/global.css` `@layer base` (fonts, `small`, `sub`/`sup`, `hr`, `button`; zfb#3382) — revisit it if `owned-v1` changes; every `class="…"` token is scanned — BEM `__` names need `wind.authoredClasses` (zfb#3365). Watch reset contents and candidate-grammar changes |
 | zudo-react JSX runtime (`@takazudo/zfb/zudo-react`) | `tsconfig.json` `jsxImportSource`; `Child` in `layouts/default.tsx` / `components/note.tsx`; HTML attribute spellings (`class`, `charset`, `datetime`); `rawHtml` for the theme bootstrap script |
 | Content collections API (`@takazudo/zfb/content`) | `pages/index.tsx`, `pages/blog/[slug].tsx`, `pages/tags/[tag].tsx` |
 | Pagination API (`@takazudo/zfb/paginate`) | `pages/blog/page/[page].tsx` |
