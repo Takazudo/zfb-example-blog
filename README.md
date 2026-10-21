@@ -1,7 +1,7 @@
 # zfb-example-blog
 
 A polished blog built with [zfb](https://github.com/Takazudo/zudo-front-builder)
-(`zudo-front-builder`) 4.5.4 — a Rust-orchestrated static site builder with
+(`zudo-front-builder`) 4.6.0 — a Rust-orchestrated static site builder with
 server-rendered pages written in zfb's own JSX runtime (zudo-react) and
 selective client-side hydration ("islands").
 
