@@ -5,16 +5,12 @@ export default defineConfig({
   // zudo-wind owns the reset. This blog styles everything with authored CSS
   // (styles/global.css) and uses no utility classes, so no tokens,
   // breakpoints, or dark binding are configured — only the reset that
-  // replaces the Tailwind preflight the 2.x build imported.
+  // replaces the Tailwind preflight the 2.x build imported. BEM `__`
+  // names such as admonition__title are ordinary classes under spec 1
+  // revision 14, so they need no authoredClasses allowlist.
   wind: {
     spec: 1,
     reset: "owned-v1",
-    // Workaround for https://github.com/Takazudo/zudo-front-builder/issues/3365:
-    // BEM `__` class names fail the build with ZW001; these have authored rules.
-    authoredClasses: {
-      admonition__title: true,
-      admonition__body: true,
-    },
   },
   collections: [
     {

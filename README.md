@@ -1,7 +1,7 @@
 # zfb-example-blog
 
 A polished blog built with [zfb](https://github.com/Takazudo/zudo-front-builder)
-(`zudo-front-builder`) 4.7.0 — a Rust-orchestrated static site builder with
+(`zudo-front-builder`) 6.0.1 — a Rust-orchestrated static site builder with
 server-rendered pages written in zfb's own JSX runtime (zudo-react) and
 selective client-side hydration ("islands").
 
@@ -43,7 +43,7 @@ pnpm install
 pnpm build
 ```
 
-Requires Node.js >= 22.12.0 and pnpm 10.x.
+Requires Node.js >= 24.0.0 and pnpm 10.x.
 
 ## Commands
 
